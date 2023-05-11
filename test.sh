@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#add test
 # Définir le chemin d'accès du fichier CSV
 csv_file="accounts.csv"
 
