@@ -23,13 +23,14 @@ passwd=$(awk 'NR==1{print $1}' password.txt)
 first_letter=${name:0:1}
 username=$(echo $first_letter$surname | tr '[:upper:]' '[:lower:]')
 
-#echo passwd sans saut de ligne
-#echo $passwd
-
-
-#creation user avec adduser et set passwd et creer home directory
+#creation user avec adduser et set passwd
 sudo useradd $username
 echo $username:$passwd | sudo chpasswd
+
+#expiration du mot de passe
+sudo chage --lastday 0 $username
+
+#creation du home
 sudo mkdir /home/$username
 sudo chown $username:$username /home/$username
 
