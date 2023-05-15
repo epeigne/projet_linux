@@ -16,40 +16,42 @@ nb_lignes=$(wc -l < $csv_file)
 #creation variables data user
 for((i=1;i<=$nb_lignes;i++));
 do
+    name=$(awk -v line="$i" 'NR==line{print $1}' name.txt)
+    surname=$(awk -v line="$i" 'NR==line{print $1}' surname.txt)
+    mail=$(awk -v line="$i" 'NR==line{print $1}' mail.txt)
+    passwd=$(awk -v line="$i" 'NR==line{print $1}' password.txt)
 
-name=$(awk -v line="$i" 'NR==line{print $1}' name.txt)
-surname=$(awk -v line="$i" 'NR==line{print $1}' surname.txt)
-mail=$(awk -v line="$i" 'NR==line{print $1}' mail.txt)
-passwd=$(awk -v line="$i" 'NR==line{print $1}' password.txt)
+    #print de verif
+    #echo $name $surname $mail $passwd
 
-#print de verif
-#echo $name $surname $mail $passwd
+    #afficher premiere lettre du prenom et creer username en minuscule
+    first_letter=${name:0:1}
+    username=$(echo $first_letter$surname | tr '[:upper:]' '[:lower:]')
 
-#afficher premiere lettre du prenom et creer username en minuscule
-first_letter=${name:0:1}
-username=$(echo $first_letter$surname | tr '[:upper:]' '[:lower:]')
+    #creation user avec adduser et set passwd
+    sudo useradd -s /bin/bash -m $username
+    echo $username:$passwd | sudo chpasswd
 
-#creation user avec adduser et set passwd
-sudo useradd -s /bin/bash -m $username
-echo $username:$passwd | sudo chpasswd
+    #expiration du mot de passe
+    sudo chage --lastday 0 $username
 
-#expiration du mot de passe
-sudo chage --lastday 0 $username
+    #creation dossier sauvegarde 
+    sudo mkdir /home/$username/a_sauver
 
-#creation dossier sauvegarde 
-sudo mkdir /home/$username/a_sauver
+    #creation dossier shared
+    if [ ! -d /home/shared ]
+    then
+        sudo mkdir /home/shared
+        sudo chown root:root /home/shared
+        sudo chmod 775 /home/shared
+    fi
 
-#creation dossier shared
-if [ ! -d /home/shared ]
-then
-sudo mkdir /home/shared
-sudo chown root:root /home/shared
-sudo chmod 775 /home/shared
-fi
+    #creation dossier user dans shared
+    sudo mkdir /home/shared/$username
+    sudo chown $username:$username /home/shared/$username
+    sudo chmod 755 /home/shared/$username
 
-#creation dossier user dans shared
-sudo mkdir /home/shared/$username
-sudo chown $username:$username /home/shared/$username
-sudo chmod 755 /home/shared/$username
+    #envoi mail
+    ssh epeign25@10.30.48.100 "echo -e \"Bonjour $name $surname,\n\nVous trouverez ci-joint vos identifiants:\nUsername: $username\nPassword: $passwd\n\nAttention: vous devrez changer votre mot de passe lors de votre première connexion!\""'| mail --subject "Création compte Linux" --exec "set sendmail=smtp://enzo.peigne%40isen-ouest.yncrea.fr:Oku45911;auth=LOGIN@smtp.office365.com:587" --append "From:enzo.peigne@isen-ouest.yncrea.fr" smtplinuxproject@gmail.com' 
 
 done
