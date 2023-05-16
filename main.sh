@@ -82,11 +82,6 @@ do
     #--------------------------------------------------ENVOI DE MAIL--------------------------------------------------
     #-----------------------------------------------------------------------------------------------------------------
 
-    #definition des parametres pour l'envoi du mail
-    #smtpserv="smtp.office365.com:587"
-    #userlogin="enzo.peigne@isen-ouest.yncrea.fr"
-    #userpass="Oku45911"
-
     #remplacement de @ par %40 pour l'envoi du mail
     userlogin_smtp=$(echo $userlogin | sed 's/@/%40/g')
 
