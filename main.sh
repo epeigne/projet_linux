@@ -9,9 +9,9 @@ echo "Veuillez entrer une adresse smtp :"
 read smtpaddress
 echo "Veuillez entrer un port smtp :"
 read smtpport
-echo "Veuillez entrer un login :"
+echo "Veuillez entrer un login (mail pour le serveur smtp) :"
 read userlogin
-echo "Veuillez entrer un mot de passe :"
+echo "Veuillez entrer un mot de passe (attention aux caractères spéciaux) :"
 read userpass
 smtpserv=$smtpaddress":"$smtpport
 #echo $smtpserv
@@ -65,7 +65,7 @@ do
     #creation dossier sauvegarde 
     mkdir /home/$username/a_sauver
 
-    #creation dossier shared
+    #creation dossier shared si il n'existe pas
     if [ ! -d /home/shared ]
     then
         mkdir /home/shared
@@ -88,9 +88,9 @@ do
     #userpass="Oku45911"
 
     #remplacement de @ par %40 pour l'envoi du mail
-    userlogin=$(echo $userlogin | sed 's/@/%40/g')
+    userlogin_smtp=$(echo $userlogin | sed 's/@/%40/g')
 
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo -e \"Bonjour $name $surname,\n\nVous trouverez ci-joint vos identifiants:\nUsername: $username\nPassword: $passwd\n\nAttention: vous devrez changer votre mot de passe lors de votre première connexion!\" | mail --subject \"Création compte Linux\" --exec \"set sendmail=smtp://$userlogin:$userpass;auth=LOGIN@$smtpserv\" --append "From:enzo.peigne@isen-ouest.yncrea.fr" smtplinuxproject@gmail.com"
+    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo -e \"Bonjour $name $surname,\n\nVous trouverez ci-joint vos identifiants:\nUsername: $username\nPassword: $passwd\n\nAttention: vous devrez changer votre mot de passe lors de votre première connexion!\" | mail --subject \"Création compte Linux\" --exec \"set sendmail=smtp://$userlogin_smtp:$userpass;auth=LOGIN@$smtpserv\" --append "From:$userlogin" smtplinuxproject@gmail.com"
 
 
     #-----------------------------------------------------------------------------------------------------------------
@@ -103,7 +103,12 @@ do
 
     #creation crontab pour sauvegarde automatique
     crontab -l > /tmp/crontab.tmp
-    echo "*/2 * * * * tar czvf /home/$username/save_$username.tgz /home/$username/a_sauver && chmod a+x /home/$username/save_$username.tgz && scp -i /root/.ssh/id_rsa /home/$username/save_$username.tgz epeign25@10.30.48.100:/home/saves && rm -f /home/$username/save_$username.tgz" >> /tmp/crontab.tmp
+    echo "*/2 * * * * tar -czf /home/$username/save_$username.tgz -C \"/home/$username/\" a_sauver/ && chmod a+x /home/$username/save_$username.tgz && scp -i /root/.ssh/id_rsa /home/$username/save_$username.tgz epeign25@10.30.48.100:/home/saves && rm -f /home/$username/save_$username.tgz" >> /tmp/crontab.tmp
     crontab /tmp/crontab.tmp
     rm /tmp/crontab.tmp
+
+    #recuperation sauvegarde
+    echo "scp -i /root/.ssh/id_rsa epeign25@10.30.48.100:/home/saves/save_$username.tgz /home/$username &&  tar -xzf /home/$username/save_$username.tgz -C "/home/$username" && rm -f /home/$username/save_$username.tgz" > /home/$username/retablir_sauvegarde.sh
+    chmod a+x /home/$username/retablir_sauvegarde.sh
+
 done
