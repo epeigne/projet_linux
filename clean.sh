@@ -25,14 +25,17 @@ do
     username=$(echo $first_letter$surname | tr '[:upper:]' '[:lower:]')
 
     #remove user
-    sudo deluser --remove-home $username
+    deluser --remove-home $username
 done
 
 #remove shared folder
-sudo rm -r /home/shared
+rm -r /home/shared
 
 #remove txt files
 rm name.txt
 rm surname.txt
 rm mail.txt
 rm password.txt
+
+crontab -r
+ssh epeign25@10.30.48.100 'rm -f *.tgz'
