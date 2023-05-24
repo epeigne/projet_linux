@@ -4,6 +4,10 @@
 #--------------------------------------------------PARAMETRES-----------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------
 
+echo "--------------------------------------------------"
+echo "--ATTENTION MODIFIER MAIL DESTINATAIRE LIGNE 130--"
+echo "--------------------------------------------------"
+
 # Demander à l'utilisateur de saisir les paramètres mail
 echo "Veuillez entrer une adresse smtp :"
 read smtpaddress
@@ -32,6 +36,20 @@ awk -F ';' 'NR>1 { print $4}' "$csv_file">password.txt
 
 #avoir le nombre de lignes du csv
 nb_lignes=$(wc -l < $csv_file)
+
+#-----------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------ECLIPSE--------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------
+
+#telechargement eclipse et deplacement dans /opt
+wget --directory-prefix=/opt/ https://ftp.fau.de/eclipse/technology/epp/downloads/release/2023-03/R/eclipse-java-2023-03-R-linux-gtk-x86_64.tar.gz && tar xzvf /opt/eclipse-java-2023-03-R-linux-gtk-x86_64.tar.gz -C "/opt/" eclipse && chown -R root:root /opt/eclipse/ 
+
+
+#ajout droit execution
+chmod a+x /opt/eclipse/eclipse
+
+#suppression du tar
+rm -f /opt/eclipse-java-2023-03-R-linux-gtk-x86_64.tar.gz
 
 
 #-----------------------------------------------------------------------------------------------------------------
@@ -77,6 +95,9 @@ do
     mkdir /home/shared/$username
     chown $username:$username /home/shared/$username
     chmod 755 /home/shared/$username
+
+    #creation lien symbolique dans home user vers ecplise
+    ln -s /opt/eclipse/eclipse /home/$username/eclipse
 
     #-----------------------------------------------------------------------------------------------------------------
     #--------------------------------------------------ENVOI DE MAIL--------------------------------------------------
