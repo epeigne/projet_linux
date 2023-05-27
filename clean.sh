@@ -37,5 +37,17 @@ rm surname.txt
 rm mail.txt
 rm password.txt
 
+#remove eclipse
+rm -r /opt/eclipse
+
+#reset firewall
+ufw --force reset
+
+#remove nextcloud server
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "rm -r /var/www/nextcloud"
+
+#remove cron
 crontab -r
+
+#remove save files
 ssh epeign25@10.30.48.100 'rm -f *.tgz'

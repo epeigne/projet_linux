@@ -5,7 +5,7 @@
 #-----------------------------------------------------------------------------------------------------------------
 
 echo "--------------------------------------------------"
-echo "--ATTENTION MODIFIER MAIL DESTINATAIRE LIGNE 130--"
+echo "--------ATTENTION AU FORMAT DU MAIL DU CSV--------"
 echo "--------------------------------------------------"
 
 # Demander à l'utilisateur de saisir les paramètres mail
@@ -34,7 +34,7 @@ awk -F ';' 'NR>1 { print $2}' "$csv_file">surname.txt
 awk -F ';' 'NR>1 { print $3}' "$csv_file">mail.txt
 awk -F ';' 'NR>1 { print $4}' "$csv_file">password.txt
 
-#avoir le nombre de lignes du csv
+#avoir le nombre de lignes du csv pour la boucle for de creation des users
 nb_lignes=$(wc -l < $csv_file)
 
 #-----------------------------------------------------------------------------------------------------------------
@@ -45,11 +45,55 @@ nb_lignes=$(wc -l < $csv_file)
 wget --directory-prefix=/opt/ https://ftp.fau.de/eclipse/technology/epp/downloads/release/2023-03/R/eclipse-java-2023-03-R-linux-gtk-x86_64.tar.gz && tar xzvf /opt/eclipse-java-2023-03-R-linux-gtk-x86_64.tar.gz -C "/opt/" eclipse && chown -R root:root /opt/eclipse/ 
 
 
-#ajout droit execution
+#ajout droit execution pour tous le monde
 chmod a+x /opt/eclipse/eclipse
+
+#creation lien symbolique vers ecplise
+ln -s /opt/eclipse/eclipse /usr/local/bin/eclipse
 
 #suppression du tar
 rm -f /opt/eclipse-java-2023-03-R-linux-gtk-x86_64.tar.gz
+
+
+#-----------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------PARE-FEU-------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------
+
+#verifie si ufw est installé
+if [ ! -f /usr/sbin/ufw ]
+then
+    apt install ufw
+fi
+
+#bloque les connexions ftp
+ufw deny ftp
+
+#bloque les connexions udp
+ufw deny proto udp from any to any
+
+#active le pare-feu
+ufw enable
+
+#affichage des regles (uncomment pour afficher les regles si besoin)
+# echo "--------------------------------------------------"
+# echo "-------------------REGLES UFW---------------------"
+# echo "--------------------------------------------------"
+# ufw status verbose
+# echo "--------------------------------------------------"
+
+
+#-----------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------NEXTCLOUD------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------
+
+#preinstallation de nextcloud grace a un repo externe et nextcloud-server
+#lien vers le repo externe: https://git.jurisic.org/ijurisic/nextcloud-deb
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "wget -qO - https://apt.jurisic.org/Release.key | gpg --dearmor | sudo dd of=/usr/share/keyrings/jurisic-keyring.gpg"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo \"deb [ signed-by=/usr/share/keyrings/jurisic-keyring.gpg ] https://apt.jurisic.org/debian/ $(lsb_release -cs) main contrib non-free\" | sudo tee /etc/apt/sources.list.d/jurisic.list" 
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "sudo apt update && sudo apt install nextcloud-server"
+
+#installation du serveur nextcloud avec occ et creation du compte admin
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "cd /usr/sbin/occ && occ maintenance:install --admin-user=\"nextcloud-admin\" --admin-pass=\"N3x+_Cl0uD\""
 
 
 #-----------------------------------------------------------------------------------------------------------------
@@ -92,12 +136,24 @@ do
     fi
 
     #creation dossier user dans shared
-    mkdir /home/shared/$username
-    chown $username:$username /home/shared/$username
-    chmod 755 /home/shared/$username
+    if [ ! -d /home/shared/$username ]
+    then
+        mkdir /home/shared/$username
+        chown $username:$username /home/shared/$username
+        chmod 755 /home/shared/$username
+    fi
 
-    #creation lien symbolique dans home user vers ecplise
-    ln -s /opt/eclipse/eclipse /home/$username/eclipse
+
+    #-----------------------------------------------------------------------------------------------------------------
+    #--------------------------------------------------NEXTCLOUD------------------------------------------------------
+    #-----------------------------------------------------------------------------------------------------------------
+
+    #creation du compte nextcloud de l'utilisateur
+    export OC_PASS=$passwd
+    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "su -s /bin/sh www-data -c \"php occ user:add --password-from-env --display-name=\"$name $surname\" $username\""
+
+
+
 
     #-----------------------------------------------------------------------------------------------------------------
     #--------------------------------------------------ENVOI DE MAIL--------------------------------------------------
@@ -106,7 +162,7 @@ do
     #remplacement de @ par %40 pour l'envoi du mail
     userlogin_smtp=$(echo $userlogin | sed 's/@/%40/g')
 
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo -e \"Bonjour $name $surname,\n\nVous trouverez ci-joint vos identifiants:\nUsername: $username\nPassword: $passwd\n\nAttention: vous devrez changer votre mot de passe lors de votre première connexion!\" | mail --subject \"Création compte Linux\" --exec \"set sendmail=smtp://$userlogin_smtp:$userpass;auth=LOGIN@$smtpserv\" --append "From:$userlogin" smtplinuxproject@gmail.com"
+    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo -e \"Bonjour $name $surname,\n\nVous trouverez ci-joint vos identifiants:\nUsername: $username\nPassword: $passwd\n\nAttention: vous devrez changer votre mot de passe lors de votre première connexion!\" | mail --subject \"Création compte Linux\" --exec \"set sendmail=smtp://$userlogin_smtp:$userpass;auth=LOGIN@$smtpserv\" --append "From:$userlogin" $mail"
 
 
     #-----------------------------------------------------------------------------------------------------------------
@@ -114,8 +170,8 @@ do
     #-----------------------------------------------------------------------------------------------------------------
 
     #creation dossier saves sur serveur de sauvegarde
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "mkdir saves"
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod 666 saves"
+    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "mkdir -p /home/saves"
+    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod 666 /home/saves"
 
     #creation crontab pour sauvegarde automatique
     crontab -l > /tmp/crontab.tmp
