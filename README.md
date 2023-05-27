@@ -11,5 +11,5 @@
 - [X] Sauvegarde users
 - [X] Eclipse sans apt
 - [X] Pare-feu local
-- [ ] Nextcloud
+- [X] Nextcloud
 - [ ] Monitoring 
