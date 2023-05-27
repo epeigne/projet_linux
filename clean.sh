@@ -26,6 +26,10 @@ do
 
     #remove user
     deluser --remove-home $username
+
+    #remove nextcloud user
+    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "occ user:delete $username"
+
 done
 
 #remove shared folder
@@ -45,6 +49,10 @@ ufw --force reset
 
 #remove nextcloud server
 ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "rm -r /var/www/nextcloud"
+apt remove nextcloud-server
+
+#remove connect_ssh
+rm /home/connect_ssh
 
 #remove cron
 crontab -r

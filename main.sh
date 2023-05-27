@@ -95,6 +95,17 @@ ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "sudo apt update && sudo apt inst
 #installation du serveur nextcloud avec occ et creation du compte admin
 ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "cd /usr/sbin/occ && occ maintenance:install --admin-user=\"nextcloud-admin\" --admin-pass=\"N3x+_Cl0uD\""
 
+#creation executable et tunnel ssh pour l'accès au serveur nextcloud
+cat > /home/connect_ssh <<EOF
+#!/bin/bash
+ssh -i /root/.ssh/id_rsa -L 4242:10.30.48.100:80 -NT epeign25@10.30.48.100
+EOF
+
+# Rendre le script exécutable
+chown root:root /home/connect_ssh
+chmod a+x /home/connect_ssh
+
+
 
 #-----------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------CREATION USER--------------------------------------------------
@@ -152,8 +163,7 @@ do
     export OC_PASS=$passwd
     ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "su -s /bin/sh www-data -c \"php occ user:add --password-from-env --display-name=\"$name $surname\" $username\""
 
-
-
+    
 
     #-----------------------------------------------------------------------------------------------------------------
     #--------------------------------------------------ENVOI DE MAIL--------------------------------------------------
