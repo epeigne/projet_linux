@@ -23,6 +23,10 @@ smtpserv=$smtpaddress":"$smtpport
 # Définir le chemin d'accès du fichier CSV
 csv_file="accounts.csv"
 
+#logins ssh
+ssh_login="epeign25"
+ssh_key="/root/.ssh/id_rsa"
+
 
 #-----------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------LECTURE CSV----------------------------------------------------
@@ -88,17 +92,17 @@ ufw enable
 
 #preinstallation de nextcloud grace a un repo externe et nextcloud-server
 #lien vers le repo externe: https://git.jurisic.org/ijurisic/nextcloud-deb
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "wget -qO - https://apt.jurisic.org/Release.key | gpg --dearmor | sudo dd of=/usr/share/keyrings/jurisic-keyring.gpg"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo \"deb [ signed-by=/usr/share/keyrings/jurisic-keyring.gpg ] https://apt.jurisic.org/debian/ $(lsb_release -cs) main contrib non-free\" | sudo tee /etc/apt/sources.list.d/jurisic.list" 
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "sudo apt update && sudo apt install nextcloud-server"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "wget -qO - https://apt.jurisic.org/Release.key | gpg --dearmor | sudo dd of=/usr/share/keyrings/jurisic-keyring.gpg"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "echo \"deb [ signed-by=/usr/share/keyrings/jurisic-keyring.gpg ] https://apt.jurisic.org/debian/ $(lsb_release -cs) main contrib non-free\" | sudo tee /etc/apt/sources.list.d/jurisic.list" 
+ssh -i $ssh_key $ssh_login@10.30.48.100 "sudo apt update && sudo apt install nextcloud-server"
 
 #installation du serveur nextcloud avec occ et creation du compte admin
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "cd /usr/sbin/occ && occ maintenance:install --admin-user=\"nextcloud-admin\" --admin-pass=\"N3x+_Cl0uD\""
+ssh -i $ssh_key $ssh_login@10.30.48.100 "cd /usr/sbin/occ && occ maintenance:install --admin-user=\"nextcloud-admin\" --admin-pass=\"N3x+_Cl0uD\""
 
 #creation executable et tunnel ssh pour l'accès au serveur nextcloud
 cat > /home/connect_ssh <<EOF
 #!/bin/bash
-ssh -i /root/.ssh/id_rsa -L 4242:10.30.48.100:80 -NT epeign25@10.30.48.100
+ssh -i $ssh_key -L 4242:10.30.48.100:80 -NT $ssh_login@10.30.48.100
 EOF
 
 # Rendre le script exécutable
@@ -111,30 +115,30 @@ chmod a+x /home/connect_ssh
 #-----------------------------------------------------------------------------------------------------------------
 
 #installation de netdata
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "apt install netdata -y"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "apt install netdata -y"
 
 #installation de jq pour le traitement du json
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "apt install jq -y"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "apt install jq -y"
 
 #recuperation ip du serveur netdata
-ip_netdata=$(ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "cat /etc/netdata/netdata.conf | grep 'IP' | awk '{print $6}'")
+ip_netdata=$(ssh -i $ssh_key $ssh_login@10.30.48.100 "cat /etc/netdata/netdata.conf | grep 'IP' | awk '{print $6}'")
 
 #creation executable et tunnel ssh pour l'accès au serveur netdata
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "
+ssh -i $ssh_key $ssh_login@10.30.48.100 "
 cat > /home/connect_ssh_netdata <<EOF
 #!/bin/bash
-ssh -i /root/.ssh/id_rsa -L 19999:$ip_netdata:19999 -NT epeign25@10.30.48.100
+ssh -i $ssh_key -L 19999:$ip_netdata:19999 -NT $ssh_login@10.30.48.100
 EOF"
 
 # Rendre le script exécutable
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chown root:root /home/connect_ssh_netdata"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod a+x /home/connect_ssh_netdata"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "chown root:root /home/connect_ssh_netdata"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "chmod a+x /home/connect_ssh_netdata"
 
 #execution du script de tunnel ssh
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "/home/connect_ssh_netdata"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "/home/connect_ssh_netdata"
 
 #creation script monitoring
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "
+ssh -i $ssh_key $ssh_login@10.30.48.100 "
 cat > /home/monitoring.sh <<EOF
 #!/bin/bash
 #recuperation infos CPU
@@ -152,19 +156,19 @@ echo "\$(date +%Y-%m-%d_%H:%M:%S),\$cpu_usage,\$ram_usage,\$network_input,\$netw
 EOF"
 
 #create monitoring.csv et ajout des headers
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "touch /home/monitoring.csv"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod 777 /home/monitoring.csv"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo \"date,cpu_usage,ram_usage,network_input,network_output\" >> /home/monitoring.csv"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "touch /home/monitoring.csv"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "chmod 777 /home/monitoring.csv"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "echo \"date,cpu_usage,ram_usage,network_input,network_output\" >> /home/monitoring.csv"
 
 # Rendre le script exécutable
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chown root:root /home/monitoring.sh"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod a+x /home/monitoring.sh"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "chown root:root /home/monitoring.sh"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "chmod a+x /home/monitoring.sh"
 
 #ajout dans crontab pour execution toutes les minutes hors week-end
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "crontab -l > /tmp/crontab.tmp"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo \"* * * * 1-5 /home/monitoring.sh\" >> /tmp/crontab.tmp"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "crontab /tmp/crontab.tmp"
-ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "rm /tmp/crontab.tmp"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "crontab -l > /tmp/crontab.tmp"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "echo \"* * * * 1-5 /home/monitoring.sh\" >> /tmp/crontab.tmp"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "crontab /tmp/crontab.tmp"
+ssh -i $ssh_key $ssh_login@10.30.48.100 "rm /tmp/crontab.tmp"
 
 
 #-----------------------------------------------------------------------------------------------------------------
@@ -221,7 +225,7 @@ do
 
     #creation du compte nextcloud de l'utilisateur
     export OC_PASS=$passwd
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "su -s /bin/sh www-data -c \"php occ user:add --password-from-env --display-name=\"$name $surname\" $username\""
+    ssh -i $ssh_key $ssh_login@10.30.48.100 "su -s /bin/sh www-data -c \"php occ user:add --password-from-env --display-name=\"$name $surname\" $username\""
 
     
 
@@ -232,7 +236,7 @@ do
     #remplacement de @ par %40 pour l'envoi du mail
     userlogin_smtp=$(echo $userlogin | sed 's/@/%40/g')
 
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo -e \"Bonjour $name $surname,\n\nVous trouverez ci-joint vos identifiants:\nUsername: $username\nPassword: $passwd\n\nAttention: vous devrez changer votre mot de passe lors de votre première connexion!\" | mail --subject \"Création compte Linux\" --exec \"set sendmail=smtp://$userlogin_smtp:$userpass;auth=LOGIN@$smtpserv\" --append "From:$userlogin" $mail"
+    ssh -i $ssh_key $ssh_login@10.30.48.100 "echo -e \"Bonjour $name $surname,\n\nVous trouverez ci-joint vos identifiants:\nUsername: $username\nPassword: $passwd\n\nAttention: vous devrez changer votre mot de passe lors de votre première connexion!\" | mail --subject \"Création compte Linux\" --exec \"set sendmail=smtp://$userlogin_smtp:$userpass;auth=LOGIN@$smtpserv\" --append "From:$userlogin" $mail"
 
 
     #-----------------------------------------------------------------------------------------------------------------
@@ -240,17 +244,17 @@ do
     #-----------------------------------------------------------------------------------------------------------------
 
     #creation dossier saves sur serveur de sauvegarde
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "mkdir -p /home/saves"
-    ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod 666 /home/saves"
+    ssh -i $ssh_key $ssh_login@10.30.48.100 "mkdir -p /home/saves"
+    ssh -i $ssh_key $ssh_login@10.30.48.100 "chmod 666 /home/saves"
 
     #creation crontab pour sauvegarde automatique
     crontab -l > /tmp/crontab.tmp
-    echo "*/2 * * * * tar -czf /home/$username/save_$username.tgz -C \"/home/$username/\" a_sauver/ && chmod a+x /home/$username/save_$username.tgz && scp -i /root/.ssh/id_rsa /home/$username/save_$username.tgz epeign25@10.30.48.100:/home/saves && rm -f /home/$username/save_$username.tgz" >> /tmp/crontab.tmp
+    echo "*/2 * * * * tar -czf /home/$username/save_$username.tgz -C \"/home/$username/\" a_sauver/ && chmod a+x /home/$username/save_$username.tgz && scp -i $ssh_key /home/$username/save_$username.tgz $ssh_login@10.30.48.100:/home/saves && rm -f /home/$username/save_$username.tgz" >> /tmp/crontab.tmp
     crontab /tmp/crontab.tmp
     rm /tmp/crontab.tmp
 
     #recuperation sauvegarde
-    echo "scp -i /root/.ssh/id_rsa epeign25@10.30.48.100:/home/saves/save_$username.tgz /home/$username &&  tar -xzf /home/$username/save_$username.tgz -C "/home/$username" && rm -f /home/$username/save_$username.tgz" > /home/$username/retablir_sauvegarde.sh
+    echo "scp -i $ssh_key $ssh_login@10.30.48.100:/home/saves/save_$username.tgz /home/$username &&  tar -xzf /home/$username/save_$username.tgz -C "/home/$username" && rm -f /home/$username/save_$username.tgz" > /home/$username/retablir_sauvegarde.sh
     chmod a+x /home/$username/retablir_sauvegarde.sh
 
 done
