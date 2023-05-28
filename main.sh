@@ -106,6 +106,66 @@ chown root:root /home/connect_ssh
 chmod a+x /home/connect_ssh
 
 
+#-----------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------MONITORING-----------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------
+
+#installation de netdata
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "apt install netdata -y"
+
+#installation de jq pour le traitement du json
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "apt install jq -y"
+
+#recuperation ip du serveur netdata
+ip_netdata=$(ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "cat /etc/netdata/netdata.conf | grep 'IP' | awk '{print $6}'")
+
+#creation executable et tunnel ssh pour l'accès au serveur netdata
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "
+cat > /home/connect_ssh_netdata <<EOF
+#!/bin/bash
+ssh -i /root/.ssh/id_rsa -L 19999:$ip_netdata:19999 -NT epeign25@10.30.48.100
+EOF"
+
+# Rendre le script exécutable
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chown root:root /home/connect_ssh_netdata"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod a+x /home/connect_ssh_netdata"
+
+#execution du script de tunnel ssh
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "/home/connect_ssh_netdata"
+
+#creation script monitoring
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "
+cat > /home/monitoring.sh <<EOF
+#!/bin/bash
+#recuperation infos CPU
+cpu_usage=$(curl -s http://$ip_netdata:19999/api/v1/data?chart=system.cpu | jq -r '.data[0][8]')
+
+#recuperation infos RAM
+ram_usage=$(curl -s http://$ip_netdata:19999/api/v1/data?chart=system.ram | jq -r '.data[0][3]')
+
+#recuperation infos network
+network_input=$(curl -s http://$ip_netdata:19999/api/v1/data?chart=system.net | jq -r '.data[0][1]')
+network_output=$(curl -s http://$ip_netdata:19999/api/v1/data?chart=system.net | jq -r '.data[0][2]')
+
+#ajout des infos dans le fichier csv
+echo "\$(date +%Y-%m-%d_%H:%M:%S),\$cpu_usage,\$ram_usage,\$network_input,\$network_output" >> /home/monitoring.csv
+EOF"
+
+#create monitoring.csv et ajout des headers
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "touch /home/monitoring.csv"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod 777 /home/monitoring.csv"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo \"date,cpu_usage,ram_usage,network_input,network_output\" >> /home/monitoring.csv"
+
+# Rendre le script exécutable
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chown root:root /home/monitoring.sh"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "chmod a+x /home/monitoring.sh"
+
+#ajout dans crontab pour execution toutes les minutes hors week-end
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "crontab -l > /tmp/crontab.tmp"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "echo \"* * * * 1-5 /home/monitoring.sh\" >> /tmp/crontab.tmp"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "crontab /tmp/crontab.tmp"
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 "rm /tmp/crontab.tmp"
+
 
 #-----------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------CREATION USER--------------------------------------------------

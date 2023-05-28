@@ -58,4 +58,9 @@ rm /home/connect_ssh
 crontab -r
 
 #remove save files
-ssh epeign25@10.30.48.100 'rm -f *.tgz'
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 'rm -f *.tgz'
+
+#remove monitoring
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 'rm /home/monitoring.csv'
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 'rm /home/monitoring.sh'
+ssh -i /root/.ssh/id_rsa epeign25@10.30.48.100 'rm /home/connect_ssh_netdata'
