@@ -12,4 +12,4 @@
 - [X] Eclipse sans apt
 - [X] Pare-feu local
 - [X] Nextcloud
-- [ ] Monitoring 
+- [X] Monitoring (fonctionnel en local, non testé sur machine distante)
